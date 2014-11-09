@@ -1,0 +1,113 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title></title>
+</head>
+<body>
+
+    <!-- File
+            $ cordova plugin add org.apache.cordova.file
+            $ cordova plugin add org.apache.cordova.file-transfer
+    -->
+    <div data-role="page" id="file">
+        <div data-role="header">
+            <a data-role="button" data-rel="back" data-direction="reverse" data-icon="arrow-l">Back</a>
+            <h1>File</h1>
+        </div>
+        <div data-role="content">
+            <input type="text" id="userInput" name="userInput" value="I'm rensanning."><br>
+            <a href="#" data-role="button" id="writeToFile">Write To File</a><br>
+
+            <a href="#" data-role="button" id="readFile">Read File</a><br>
+            <p id="data1"></p><p id="data2"></p><br>
+
+            <a href="#" data-role="button" id="deleteFile">Delete File</a><br>
+        </div>
+        <script src="cordova.js"></script>
+        <script src="scripts/jquery-2.1.1.min.js"></script>
+        <script type="text/javascript">
+
+
+            (function () {
+                document.addEventListener("deviceready", onDeviceReady, false);
+                function onDeviceReady() {
+                    $("#writeToFile").on("click", writeToFile);
+                    $("#readFile").on("click", readFile);
+                    $("#deleteFile").on("click", deleteFile);
+                }
+
+                function writeToFile() {
+                    window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, gotFSForWrite, fail);
+                }
+                function gotFSForWrite(fileSystem) {
+                    fileSystem.root.getFile("CordovaSample.txt", { create: true, exclusive: false }, gotWriteFileEntry, fail);
+                }
+                function gotWriteFileEntry(fileEntry) {
+                    fileEntry.createWriter(gotFileWriter, fail);
+                }
+                function gotFileWriter(writer) {
+                    var userText = $('#userInput').val();
+                    writer.seek(writer.length);
+                    writer.write('\n\n' + userText);
+                    writer.onwriteend = function (evt) {
+                        alert("You wrote ' " + userText + " ' at the end of the file.");
+                    }
+                    $('#userInput').val("");
+                }
+
+                function readFile() {
+                    window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, gotFSForRead, fail);
+                }
+                function gotFSForRead(fileSystem) {
+                    fileSystem.root.getFile("CordovaSample.txt", null, gotReadFileEntry, fail);
+                }
+                function gotReadFileEntry(fileEntry) {
+                    fileEntry.file(gotFileRead, fail);
+                }
+                function gotFileRead(file) {
+                    readDataUrl(file);
+                    readAsText(file);
+                }
+                function readDataUrl(file) {
+                    var reader = new FileReader();
+                    reader.onloadend = function (evt) {
+                        var element = document.getElementById('data1');
+                        element.innerHTML = '<strong>Read as data URL:</strong> <br><pre>' + evt.target.result + '</pre>';
+                    };
+                    reader.readAsDataURL(file);
+                }
+                function readAsText(file) {
+                    var reader = new FileReader();
+                    reader.onloadend = function (evt) {
+                        var element = document.getElementById('data2');
+                        element.innerHTML = '<strong>Read as data text:</strong> <br><pre>' + evt.target.result + '</pre>';
+                    };
+                    reader.readAsText(file);
+                }
+
+                function deleteFile() {
+                    window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, gotFSForRemove, fail);
+                }
+                function gotFSForRemove(fileSystem) {
+                    fileSystem.root.getFile("CordovaSample.txt", { create: false, exclusive: false }, gotRemoveFileEntry, fail);
+                }
+                function gotRemoveFileEntry(fileEntry) {
+                    fileEntry.remove(
+                      function (entry) {
+                          alert("Removal succeeded");
+                      },
+                      function (error) {
+                          alert("Error removing file: " + error.code);
+                      });
+                }
+
+                function fail(error) {
+                    alert(error.code);
+                }
+            })();
+
+        </script>
+    </div>
+</body>
+</html>
