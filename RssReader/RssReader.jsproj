@@ -100,6 +100,7 @@
   <ItemGroup>
     <Content Include="createDir.html" />
     <Content Include="file.html" />
+    <Content Include="GetFileFromInternet.html" />
     <Content Include="js\script.js" />
     <Folder Include="images\" />
     <Content Include="merges\android\scripts\android2.3-jscompat.js" />

@@ -1,0 +1,149 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title></title>
+</head>
+<body>
+
+    <div data-role="page" id="file">
+        <div data-role="header">
+            <a data-role="button" data-rel="back" data-direction="reverse" data-icon="arrow-l">Back</a>
+            <h1>File</h1>
+        </div>
+        <div data-role="content">
+            <input type="text" id="userInput" name="userInput" value="I'm rensanning."><br>
+            <a href="#" data-role="button" id="writeToFile" onclick="test()">Write To File</a><br>
+
+            <a href="#" data-role="button" id="readFile">Read File</a><br>
+            <p id="data1"></p><p id="data2"></p><br>
+
+            <a href="#" data-role="button" id="deleteFile">Delete File</a><br>
+
+
+            <input type="text" id="url" value="http://feed.cnblogs.com/news/rss" />
+            <br />
+            <input type="button" value="测试" onclick="dl()" />
+        </div>
+        <script src="cordova.js"></script>
+        <script src="scripts/jquery-2.1.1.min.js"></script>
+        <script type="text/javascript">
+
+            function dl() {
+                test();
+               
+            }
+            function downFile(url) {
+                var me = this;
+
+                //正则表达式，用于获取文件名称
+                reg = /[^\\\/]*[\\\/]+/g,
+                //获取下载地址，me.fullPath在main控制层中获取，这是一个全局变量
+                //filePath = "//RssReader/" + url.replace(reg, '');
+                filePath = fullPath + "/" + "a.xml";
+                //下载地址
+                //url = encodeURI(url),
+                //fileTransfer = new FileTransfer();
+                //alert('正在下载中，请等待...');
+                //fileTransfer.download(url, filePath,
+                //function (entry) {
+                //    alert('下载成功！请在' + fullPath + '目录中查看');
+                //},
+                //function (error) {
+                //    alert('下载失败！' + error.code);
+                //});
+
+
+                var fileTransfer = new FileTransfer();
+                var uri = encodeURI(url);
+
+                fileTransfer.download(
+                    uri,
+                    filePath,
+                    function (entry) {
+                        alert("download complete: " + entry.fullPath);
+                    },
+                    function (error) {
+                        alert("download error source " + error.source);
+                        alert("download error target " + error.target);
+                        alert("upload error code" + error.code);
+                    }
+                );
+            }
+
+
+            fullPath = "";
+            function test() {
+                write('your data', 'RssReader', 'stores.txt')
+            }
+
+            var datas = null;//datas need write
+            var directory = "mobovip";//default directory
+            var fileName = "stores.txt";//default file name
+            function write(data, directory, fileName) {
+                this.datas = data;
+                this.directory = directory;
+                this.fileName = fileName;
+                window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, onFileSystemSuccess, onFileSystemFail);
+            }
+
+            //获取mobovip目录，如果不存在则创建该目录
+            function onFileSystemSuccess(fileSystem) {
+                newFile = fileSystem.root.getDirectory(directory, {
+                    create: true,
+                    exclusive: false
+                }, onDirectorySuccess, onFileSystemFail);
+            }
+            //获取mobovip目录下面的stores.txt文件，如果不存在则创建此文件
+            function onDirectorySuccess(newFile) {
+                fullPath = newFile.toURL();
+                alert(fullPath);
+
+                newFile.getFile(fileName, {
+                    create: true,
+                    exclusive: false
+                }, onFileSuccess, onFileSystemFail);
+            }
+            /**
+             * 获取FileWriter对象，用于写入数据
+             * @param fileEntry
+             */
+            function onFileSuccess(fileEntry) {
+                fileEntry.createWriter(onFileWriterSuccess, onFileSystemFail);
+            }
+
+            /**
+             * write datas
+             * @param writer
+             */
+            function onFileWriterSuccess(writer) {
+                //	log("fileName="+writer.fileName+";fileLength="+writer.length+";position="+writer.position);
+                writer.onwrite = function (evt) {//当写入成功完成后调用的回调函数
+
+                    alert("write success");
+
+                    downFile($("#url").val());
+                };
+                writer.onerror = function (evt) {//写入失败后调用的回调函数
+                    alert("write error");
+                };
+                writer.onabort = function (evt) {//写入被中止后调用的回调函数，例如通过调用abort()
+                    alert("write abort");
+                };
+                // 快速将文件指针指向文件的尾部 ,可以append
+                //	writer.seek(writer.length);
+                writer.write(datas);//向文件中写入数据
+                //	writer.truncate(11);//按照指定长度截断文件
+                //	writer.abort();//中止写入文件
+            }
+
+            function onFileSystemFail(error) {
+                alert("Failed to retrieve file:" + error.code);
+            }
+
+
+
+        </script>
+    </div>
+</body>
+</html>
