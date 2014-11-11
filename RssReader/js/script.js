@@ -1,89 +1,164 @@
 ﻿/// <reference path="../scripts/jquery-2.1.1.intellisense.js" />
 
-function downLoad() {
-
-    //requestFileSystem(LocalFileSystem.PERSISTENT, 0, function (fileSystem) {
-    //    fileSystem
-    //    fileSystem.root.getDirectory("file_mobile/download", { create: true },
-    //           function (fileEntry) { },
-    //           function () {
-    //               alert("创建目录失败");
-    //           });
-
-
-    //    var fileTransfer = new FileTransfer();
-
-    //    var url = encodeURI($("#url").val());
-    //    var filePath = "file:///file_mobile/download/a.png"
-
-    //    fileTransfer.download(url, filePath, function () {
-    //        alert("ok");
-    //        //下载成功
-    //    }, function () {
-    //        //下载失败
-    //        alert("error");
-
-    //    });
-    //});
+Util = {
+    //程序创建的根目录
+    RootDir: "RssReader",
+    //下载文章目录
+    ArticleDir: "Article",
+    //临时文件的路径
+    TmpFilePath: "tmp.xml",
+};
+(function () {
+    document.addEventListener("deviceready", onDeviceReady, false);
+    function onDeviceReady() {
+        console.log("device is ready ");
+        window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, onFileSystemSuccess, onFileSystemFail);
+    }
 
 
-    //window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, onFileSystemSuccess, fail);
-    //window.resolveLocalFileSystemURI("file:///example.txt", onResolveSuccess, fail);
-
-    //function onFileSystemSuccess(fileSystem) {
-    //    console.log(fileSystem.name);
-    //}
-
-    //function onResolveSuccess(fileEntry) {
-    //    console.log(fileEntry.name);
-    //}
-
-    //function fail(evt) {
-    //    console.log(evt.target.error.code);
-    //}
-    onDeviceReady();
- //   downFile($("#url").val());
-}
-util.appRootDirName = "test";
-// 等待加载PhoneGap
-document.addEventListener("deviceready", onDeviceReady, false);
-// PhoneGap加载完毕
-function onDeviceReady() {
-    //查找是否有zgky这个文件夹，没有则创建，然后找到这个文件夹的绝对路径
-    window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, function (fileSystem) {
-        //util.appRootDirName 全局变量，这里是zgky
-        fileSystem.root.getDirectory(util.appRootDirName, {
+    //获取RootDir目录，如果不存在则创建该目录
+    function onFileSystemSuccess(fileSystem) {
+        var rootDir = fileSystem.root.getDirectory(Util.RootDir, {
             create: true,
             exclusive: false
-        }, function (entry) {
-            //网上流传的资料中都是使用fullPath，在这里我获取到的是相对目录，在下载时使用会报错，所以换做了toURL()
-            //这是一个全局全局变量，用以保存路径
-            util.fullPath = entry.toURL();
-            //console.log('创建文件夹成功');
-            //console.log(util.fullPath);
-        }, function () {
-            alert('创建文件夹失败');
-        });
-    }, function () {
-        alert('创建文件夹失败');
-    });
+        }, onDirectorySuccess, onFileSystemFail);
+    }
+    //获取RootDir目录下面的TmpFilePath文件，如果不存在则创建此文件
+    function onDirectorySuccess(newFile) {
+
+        Util.RootDir = newFile.toURL();
+        console.log("成功创建目录" + Util.RootDir);
+
+        var articleDir = newFile.getDirectory(Util.ArticleDir, {
+            create: true,
+            exclusive: false
+        }, function (dir) {
+            Util.ArticleDir = dir.toURL();
+            console.log("成功创建目录" + Util.ArticleDir);
+        }, onFileSystemFail);
+
+        var thisFile = newFile.getFile(Util.TmpFilePath, {
+            create: true,
+            exclusive: false
+        }, onFileSuccess, onFileSystemFail);
+    }
+    /**
+     * 获取FileWriter对象，用于写入数据
+     * @param fileEntry
+     */
+    function onFileSuccess(fileEntry) {
+        Util.TmpFilePath = fileEntry.toURL();
+        console.log("成功创建文件 in onFileSuccess  " + Util.TmpFilePath);
+
+        // fileEntry.createWriter(onFileWriterSuccess, onFileSystemFail);
+    }
+
+    function onFileSystemFail(error) {
+        console.error("Failed to retrieve file:" + error.code);
+    }
+
+
+})();
+
+function downLoad() {
+    var url = $("#url").val();
+    downFile(url, Util.TmpFilePath);
 }
 
-function downFile(url) {
-    var me = this,
-        //正则表达式，用于获取文件名称
-    reg = /[^\\\/]*[\\\/]+/g,
-    //获取下载地址，me.fullPath在main控制层中获取，这是一个全局变量
-    filePath = me.fullPath + "/" + url.replace(reg, ''),
-    //下载地址
-    url = encodeURI(url),
-    fileTransfer = new FileTransfer();
-    alert('正在下载中，请等待...');
-    fileTransfer.download(url, filePath,
-    function (entry) {
-        alert('下载成功！请在' + entry.fullPath + '目录中查看');
-    },
-    function (error) {
-        alert('下载失败！' + error.code);
-    });
+
+//从网络上下载文件
+function downFile(url, filePath) {
+    console.log("开始下载: " + url);
+
+    var fileTransfer = new FileTransfer();
+    var uri = encodeURI(url);
+
+    fileTransfer.download(
+        uri,
+        filePath,
+        function (entry) {
+            console.log("download complete: " + entry.fullPath);
+            readFile(filePath);
+        },
+        function (error) {
+            console.error("download error source " + error.source);
+            console.error("download error target " + error.target);
+            console.error("download error code" + error.code);
+            /*
+            1 = FileTransferError.FILE_NOT_FOUND_ERR
+            2 = FileTransferError.INVALID_URL_ERR
+            3 = FileTransferError.CONNECTION_ERR
+            4 = FileTransferError.ABORT_ERR
+            5 = FileTransferError.NOT_MODIFIED_ERR
+            */
+        }
+    );
 }
+
+
+function readFile(filePath) {
+    console.log(filePath);
+    window.requestFileSystem(LocalFileSystem.PERSISTENT, 0,
+        function (fileSystem) {
+            //console.log("获取文件权限成功" + fileSystem.toURL());
+            console.log("fileSystem" + filePath);
+            filePath = filePath.replace("file://", "");
+            console.log("replace" + filePath);
+            fileSystem.root.getFile(filePath, null,
+                function (fileEntry) {
+                    console.log("fileEntry" + fileEntry);
+
+                    fileEntry.file(function (file) {
+                        console.log("file" + file);
+                        readAsText(file);
+                    }, fail);
+                }, fail);
+        }, fail);
+}
+function fail(error) {
+    console.error(error.code);
+}
+
+function readAsText(file) {
+    var reader = new FileReader();
+    reader.onloadend = function (evt) {
+        var element = document.getElementById('msg');
+        element.innerHTML = '<strong>Read as data text:</strong> <br><pre>' + evt.target.result + '</pre>';
+    };
+    reader.readAsText(file, "utf-8");
+}
+//应该可以把图片转为base64编码
+function readDataUrl(file) {
+    var reader = new FileReader();
+    reader.onloadend = function (evt) {
+        var element = document.getElementById('data1');
+        element.innerHTML = '<strong>Read as data URL:</strong> <br><pre>' + evt.target.result + '</pre>';
+    };
+    reader.readAsDataURL(file);
+}
+
+///**
+//   * write datas
+//   * @param writer
+//   */
+//function onFileWriterSuccess(writer) {
+//    //	log("fileName="+writer.fileName+";fileLength="+writer.length+";position="+writer.position);
+//    writer.onwrite = function (evt) {//当写入成功完成后调用的回调函数
+//        alert("write success");
+//    };
+//    writer.onerror = function (evt) {//写入失败后调用的回调函数
+//        alert("write error");
+//    };
+//    writer.onabort = function (evt) {//写入被中止后调用的回调函数，例如通过调用abort()
+//        alert("write abort");
+//    };
+//    // 快速将文件指针指向文件的尾部 ,可以append
+//    //	writer.seek(writer.length);
+//    writer.write(datas);//向文件中写入数据
+//    //	writer.truncate(11);//按照指定长度截断文件
+//    //	writer.abort();//中止写入文件
+//}
+
+//function onFileSystemFail(error) {
+//    alert("Failed to retrieve file:" + error.code);
+//}
