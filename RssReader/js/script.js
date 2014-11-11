@@ -49,8 +49,6 @@ Util = {
     function onFileSuccess(fileEntry) {
         Util.TmpFilePath = fileEntry.toURL();
         console.log("成功创建文件 in onFileSuccess  " + Util.TmpFilePath);
-
-        // fileEntry.createWriter(onFileWriterSuccess, onFileSystemFail);
     }
 
     function onFileSystemFail(error) {
@@ -102,6 +100,9 @@ function readFile(filePath) {
         function (fileSystem) {
             //console.log("获取文件权限成功" + fileSystem.toURL());
             console.log("fileSystem" + filePath);
+            //filePath Either an absolute path or a relative path
+            //An absolute path is a relative path from the root directory, prepended with a '/'.
+            //see http://www.w3.org/TR/2011/WD-file-system-api-20110419/#dfn-absolute-path
             filePath = filePath.replace("file://", "");
             console.log("replace" + filePath);
             fileSystem.root.getFile(filePath, null,
